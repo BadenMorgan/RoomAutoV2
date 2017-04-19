@@ -45,6 +45,8 @@ possibility of such damage.
 #ifndef ESP8266_h
 #define ESP8266_h
 
+#define NTP_PACKET_SIZE 48
+
 
 
 #include "Wifi_Config.h"
@@ -66,6 +68,9 @@ class ESP8266 {
     int waittime = 10000;
     byte failed = 10;
     int PublishInterval = 5000;
+    uint32_t stamp2 = 0;
+
+    uint8_t NTPUpate = 0;
 
     //standard variable
     byte fails = 0;
@@ -93,7 +98,7 @@ class ESP8266 {
     byte WifiCheck(String SSID);
     void initESP8266();
     void MQTTProcess(void (*SubFunction)(), void (*SubHandle)(), void (*PublishHandle)());
-    void NTPProcess(void);
+    void NTPProcess(byte (*RTCUpdate)(uint16_t,uint8_t,uint8_t,uint8_t,uint8_t,uint8_t));
   private:
     boolean connectWiFi();
     void ClearIncomingSerial();

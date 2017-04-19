@@ -12,12 +12,9 @@
 //#define SERVER "test.mosquitto.org"  //host for mosquitto broker
 //#define PORT 1883  //port number for mosquitto broker
 
-//#define _DEBUG_
 //#define ALLDEBUG // may break functionality but will help diagnose connection issues
 //#define AUTORESET //used to autoreset the device if there is no communication with the module or if a complete failuer to connect to wifi occured
 #define RESETPIN 10
 
 #define SOFTSERIALRX 8
-#define SOFTSERIALTX 9
-
-
+#define SOFTSERIALTX 12

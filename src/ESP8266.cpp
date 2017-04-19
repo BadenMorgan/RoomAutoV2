@@ -309,7 +309,7 @@ void ESP8266::MQTTSubscribe(String topic) {
   //sending message
   Serial.println(cmdtemp);                                              //sending message
   Serial.flush();
-  for (int i = 0; i < sizeof(cmd); i++) {
+  for (uint8_t i = 0; i < sizeof(cmd); i++) {
     Serial.write(cmd[i]);
   }
 #ifdef ALLDEBUG
@@ -323,7 +323,7 @@ void ESP8266::MQTTSubscribe(String topic) {
 #endif
   ResetStamp();
   while (!Serial.available()) {
-    if ((millis() - stamp) >= waittime) {
+    if ((millis() - stamp) >= (uint32_t)waittime) {
       break;
     }
   }
@@ -402,7 +402,7 @@ void ESP8266::MQTTPublish(String topic, String message) {
     cmd[i] = momcmd[i];
   }
   cmd[3] = topiclen;
-  for (int i = 0; i < topic.length(); i++) {
+  for (uint8_t i = 0; i < topic.length(); i++) {
     cmd[4 + i] = topic[i];
   }
   for (int i = 0; i < msgLen; i++) {
@@ -413,7 +413,7 @@ void ESP8266::MQTTPublish(String topic, String message) {
   cmdtemp += sizeof(cmd);
   //sending message
   Serial.println(cmdtemp);
-  for (int i = 0; i < sizeof(cmd); i++) {
+  for (uint8_t i = 0; i < sizeof(cmd); i++) {
     Serial.write(cmd[i]);                                                     //publish message
   }
 #ifdef ALLDEBUG
@@ -453,7 +453,7 @@ void ESP8266::MQTTPublish(String topic, byte *message, byte messagelen) {
     cmd[i] = momcmd[i];
   }
   cmd[3] = topiclen;
-  for (int i = 0; i < topic.length(); i++) {
+  for (uint8_t i = 0; i < topic.length(); i++) {
     cmd[4 + i] = topic[i];
   }
   for (int i = 0; i < messagelen; i++) {
@@ -464,7 +464,7 @@ void ESP8266::MQTTPublish(String topic, byte *message, byte messagelen) {
   cmdtemp += sizeof(cmd);
   //sending message
   Serial.println(cmdtemp);
-  for (int i = 0; i < sizeof(cmd); i++) {
+  for (uint8_t i = 0; i < sizeof(cmd); i++) {
     Serial.write(cmd[i]);                                                     //publish message
   }
   //ClearIncomingSerial();
@@ -482,7 +482,6 @@ void ESP8266::MQTTPublish(String topic, byte *message, byte messagelen) {
 //new sub check doesnt work though
 //check for incoming data
 void ESP8266::MQTTSubCheck(void (*SubHandle)()) {
-  char incoming;
   String topic = "";
   String payload = "";
 #ifdef _DEBUG_
@@ -508,7 +507,7 @@ void ESP8266::MQTTSubCheck(void (*SubHandle)()) {
           break;
         }
       }
-      byte len = temp.toInt();
+
       if (Serial.read() == 48) {
         volatile byte len = (byte) Serial.read();
         Sub1->len = len;
@@ -604,8 +603,8 @@ byte ESP8266::WifiCheck(String SSID) {
   mySerial.println(SSID.length());
 #endif
   delay(100);
-  if (Serial.find("+CWJAP:\"")) {                                            //look for response
-    for (int i = 0; i < SSID.length() ; i++) {
+  if (Serial.find(F("+CWJAP:\""))) {                                            //look for response
+    for (uint8_t i = 0; i < SSID.length() ; i++) {
       char character = Serial.read();
 #ifdef ALLDEBUG
       mySerial.write(character);
@@ -761,7 +760,7 @@ inline void ESP8266::FindSENDOK() {
     delay(2);
   }
 
-  if (((millis() - stamp) > waittime) || (sentflag == 1)) {
+  if (((millis() - stamp) > (uint32_t)waittime) || (sentflag == 1)) {
 #ifdef ALLDEBUG
     mySerial.println();
     for (int i = 0; i < 7 ; i++) {
@@ -893,7 +892,7 @@ inline void ESP8266::LINKED() {
     delay(2);
   }
 
-  if (((millis() - stamp) > waittime) || (linkflag != 0)) {
+  if (((millis() - stamp) > (uint32_t)waittime) || (linkflag != 0)) {
     if (linkflag == 1)
     {
 #ifdef _DEBUG_
@@ -1036,7 +1035,7 @@ inline void ESP8266::FINDRESPONSE() {
     delay(2);
   }
 
-  if (((millis() - stamp) > waittime) || (foundflag != 0)) {
+  if (((millis() - stamp) > (uint32_t)waittime) || (foundflag != 0)) {
     if (foundflag == 1)
     {
 #ifdef _DEBUG_
@@ -1090,9 +1089,8 @@ inline void ESP8266::FINDRESPONSE() {
   }
 }
 
-void ESP8266::NTPProcess(void){//void (*UpdateTime)()){
+void ESP8266::NTPProcess(byte (*RTCUpdate)(uint16_t,uint8_t,uint8_t,uint8_t,uint8_t,uint8_t)){//void (*UpdateTime)()){
   int i = 0;
-  String cmd = "AT+CIPSTART=\"UDP\",\"196.10.54.57\",123"; // NTP server
   int counta = 0;
   uint8_t packetBuffer[48] = {0x1B,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
 };
@@ -1109,10 +1107,6 @@ void ESP8266::NTPProcess(void){//void (*UpdateTime)()){
     // subtract seventy years:
   unsigned long epoch;
 
-  unsigned long DST; // adjust to your GMT+DST
-
-  unsigned long timestamp;
-
   uint16_t year;
   uint8_t month;
   uint16_t day;
@@ -1122,30 +1116,40 @@ void ESP8266::NTPProcess(void){//void (*UpdateTime)()){
 
   uint16_t tempday;
 
-  uint32_t tempepoch;
-
-
   //byte cmd[48] =  {0};  //construct http GET request
-  cmd[0] = 0x23;
-  String cmd2 = "                                       Ü s..z¬";
-  volatile byte temp[6] = {0, 0, 0, 0, 0, 0};
   switch(NTPUpate){
-    case 0:
-
+    case 1:
+      MQTTDisconnect();
+      NTPUpate++;
+      stamp2 = millis();
+      break;
+    case 2:
+      if((millis() - stamp2) >= 2000){
+        Serial.println("AT+CIPCLOSE");
+        NTPUpate++;
+        stamp2 = millis();
+      }
+      break;
+    case 3:
+      if((millis() - stamp2) >= 2000){
+        ClearIncomingSerial();
+        NTPUpate++;
+        stamp2 = millis();
+      }
+      break;
+    case 4:
         if((millis() - stamp2) >= 10000){
-          mySerial.println("running ntp");
           NTPUpate++;
         }
         break;
-    case 1:
+    case 5:
       Serial.println("AT+CIPSTART=\"UDP\",\"196.10.54.57\",123");
       delay(2000);
-      if(Serial.find("Error")){
-        mySerial.print("RECEIVED: Error");
-        return 0;
+      if(Serial.find(F("Error"))){
+        return;
       }
 
-      Serial.print("AT+CIPSEND=");
+      Serial.print(F("AT+CIPSEND="));
       Serial.println(NTP_PACKET_SIZE);
       if(Serial.find(">"))
       {
@@ -1155,51 +1159,29 @@ void ESP8266::NTPProcess(void){//void (*UpdateTime)()){
           delay(5);
         }
       }else{
-        Serial.println("AT+CIPCLOSE");
-        return 0;
+        Serial.println(F("AT+CIPCLOSE"));
+        return;
       }
 
-      //Serial1.find("+IPD,48:");
-
-
-
-      mySerial.println("ESP2866 ACK : ");
       for (byte i = 0; i < acksize; i++)
       {
           while (Serial.available() == 0 && counta < 15)  // you may have to wait for some bytes
           {
             counta += 1;
-            mySerial.print(".");
             delay(100);
           }
         byte ch = Serial.read();
         if(ch == 0x3A){
-          mySerial.println("found :");
           break;
         }
-        if (ch < 0x10) mySerial.print('0');
-        mySerial.print(ch,HEX);
-        mySerial.print(' ');
-        if ( (((i+1) % 15) == 0) ) { mySerial.println(); }
       }
-      mySerial.println();
-      mySerial.println();
-
-      //memset(packetBuffer, 0, NTP_PACKET_SIZE);
-
-      mySerial.println("Server answer : ");
-
-
+      delay(5);
       while (Serial.available() > 0) {
         ch = Serial.read();
         if (i <= NTP_PACKET_SIZE)
         {
           packetBuffer[i] = ch;
         }
-        if (ch < 0x10) mySerial.print('0');
-        mySerial.print(ch,HEX);
-        mySerial.print(' ');
-        if ( (((i+1) % 15) == 0) ) { mySerial.println(); }
         delay(5);
         i++;
         if ( ( i < NTP_PACKET_SIZE ) && ( Serial.available() == 0 ) )
@@ -1207,24 +1189,10 @@ void ESP8266::NTPProcess(void){//void (*UpdateTime)()){
           while (Serial.available() == 0 && counta < 15)  // you may have to wait for some bytes
           {
             counta += 1;
-            mySerial.print("!");
             delay(100);
           }
         }
       }
-      mySerial.println();
-      mySerial.println();
-      mySerial.print(i+1);
-      mySerial.println(" bytes received"); // will be more than 48
-      mySerial.println();
-      mySerial.print(packetBuffer[40],HEX);
-      mySerial.print(" ");
-      mySerial.print(packetBuffer[41],HEX);
-      mySerial.print(" ");
-      mySerial.print(packetBuffer[42],HEX);
-      mySerial.print(" ");
-      mySerial.print(packetBuffer[43],HEX);
-      mySerial.print(" = ");
 
       highWord = word(packetBuffer[40], packetBuffer[41]);
       lowWord = word(packetBuffer[42], packetBuffer[43]);
@@ -1232,22 +1200,13 @@ void ESP8266::NTPProcess(void){//void (*UpdateTime)()){
         // this is NTP time (seconds since Jan 1 1900):
       secsSince1900 = highWord << 16 | lowWord;
 
-      mySerial.print(secsSince1900,DEC);
-
         // Unix time starts on Jan 1 1970. In seconds, that's 2208988800:
       seventyYears = 2208988800UL;
         // subtract seventy years:
       epoch = secsSince1900 - seventyYears;
 
-      DST = 60*60*2; // adjust to your GMT+DST
-
-      timestamp = epoch + DST;
-
-      mySerial.println();
-      mySerial.print("Epoch : ");
-      mySerial.println(epoch,DEC);
       Serial.println("AT+CIPCLOSE");
-      mySerial.print("closed connection");
+
 
       second = (epoch % 60);
       minute = (epoch % 3600)/60;
@@ -1255,12 +1214,14 @@ void ESP8266::NTPProcess(void){//void (*UpdateTime)()){
 
       epoch = epoch - second - minute * 60 - hour * 3600;
       day = epoch/86400;
-      year = day/365;
+      year = (day  - (year / 4))/365;
 
-      day = day - (365 * year) - ((year + 2) / 4);
-
+      day = day - (365 * year) - (year / 4);
       hour += 2;
-      if( hour > 23) hour - 24;
+      if( hour > 23){
+        hour -= 24;
+        day += 1;
+      }
 
       year += 1970;
 
@@ -1275,142 +1236,61 @@ void ESP8266::NTPProcess(void){//void (*UpdateTime)()){
           if(hour > 23) hour = 0;
         }
       }
+      tempday = day;
+      month = 1;
 
-    //   epoch = tm_sec + tm_min*60 + tm_hour*3600 + tm_yday*86400 +
-    //  (tm_year-70)*31536000 + ((tm_year-69)/4)*86400 -
-    //  ((tm_year-1)/100)*86400 + ((tm_year+299)/400)*86400
+      if( ((day > 334) && (((year - 2016) % 4) != 0)) ||  ((day > 335) && (((year - 2016) % 4) == 0)) ){
+        month = 12;
+        if(((year - 2016) % 4) != 0) tempday -=334;
+        else tempday -= 335;
+      }else if( ((day > 304) && (((year - 2016) % 4) != 0)) ||  ((day > 305) && (((year - 2016) % 4) == 0)) ){
+        month = 11;
+        if(((year - 2016) % 4) != 0) tempday -= 304;
+        else tempday -= 305;
+      }else if( ((day > 273) && (((year - 2016) % 4) != 0)) ||  ((day > 274) && (((year - 2016) % 4) == 0)) ){
+        month = 10;
+        if(((year - 2016) % 4) != 0) tempday -= 273;
+        else tempday -= 274;
+      }else if( ((day > 243) && (((year - 2016) % 4) != 0)) ||  ((day > 244) && (((year - 2016) % 4) == 0)) ){
+        month = 9;
+        if(((year - 2016) % 4) != 0) tempday -= 243;
+        else tempday -= 244;
+      }else if( ((day > 212) && (((year - 2016) % 4) != 0)) ||  ((day > 213) && (((year - 2016) % 4) == 0)) ){
+        month = 8;
+        if(((year - 2016) % 4) != 0) tempday -=212;
+        else tempday -= 213;
+      }else if( ((day > 181) && (((year - 2016) % 4) != 0)) ||  ((day > 182) && (((year - 2016) % 4) == 0)) ){
+        month = 7;
+        if(((year - 2016) % 4) != 0) tempday -=181;
+        else tempday -= 182;
+      }else if( ((day > 151) && (((year - 2016) % 4) != 0)) ||  ((day > 152) && (((year - 2016) % 4) == 0)) ){
+        month = 6;
+        if(((year - 2016) % 4) != 0) tempday -= 151;
+        else tempday -= 152;
+      }else if( ((day > 120) && (((year - 2016) % 4) != 0)) ||  ((day > 121) && (((year - 2016) % 4) == 0)) ){
+        month = 5;
+        if(((year - 2016) % 4) != 0) tempday -= 120;
+        else tempday -=121;
+      }else if( ((day > 90) && (((year - 2016) % 4) != 0)) ||  ((day > 91) && (((year - 2016) % 4) == 0)) ){
+        month = 4;
+        if(((year - 2016) % 4) != 0) tempday -=90;
+        else tempday -= 91;
+      }else if( ((day > 59) && (((year - 2016) % 4) != 0)) ||  ((day > 60) && (((year - 2016) % 4) == 0)) ){
+        month = 3;
+        if(((year - 2016) % 4) != 0) tempday -= 59;
+        else tempday -=60;
+      }else if(day > 31){
+        month = 2;
+        tempday -=31;
+      }
+      day = tempday;
 
-
-
-      // year = (epoch / 31450000) + 1970;
-      // tempepoch = (epoch - (epoch/31450000)) - (86400 * (14 + ((year - 2016)/4)));
-      // day = ( tempepoch / 86400);
-      // tempday = day;
-      // month = 1
-      //
-      // if( ((day > 334) && (((year - 2016) % 4) == 0)) ||  ((day > 335) && (((year - 2016) % 4) !== 0)) ){
-      //   month = 12;
-      //   tempday -=334;
-      // }else if( ((day > 304) && (((year - 2016) % 4) == 0)) ||  ((day > 305) && (((year - 2016) % 4) !== 0)) ){
-      //   month = 11;
-      //   tempday -= 304;
-      // }else if( ((day > 273) && (((year - 2016) % 4) == 0)) ||  ((day > 274) && (((year - 2016) % 4) !== 0)) ){
-      //   month = 10;
-      //   tempday -= 273;
-      // }else if( ((day > 243) && (((year - 2016) % 4) == 0)) ||  ((day > 244) && (((year - 2016) % 4) !== 0)) ){
-      //   month = 9;
-      //   tempday -= 243;
-      // }else if( ((day > 212) && (((year - 2016) % 4) == 0)) ||  ((day > 213) && (((year - 2016) % 4) !== 0)) ){
-      //   month = 8;
-      //   tempday -=212
-      // }else if( ((day > 181) && (((year - 2016) % 4) == 0)) ||  ((day > 182) && (((year - 2016) % 4) !== 0)) ){
-      //   month = 7;
-      //   tempday -=181;
-      // }else if( ((day > 151) && (((year - 2016) % 4) == 0)) ||  ((day > 152) && (((year - 2016) % 4) !== 0)) ){
-      //   month = 6;
-      //   tempday -= 151;
-      // }else if( ((day > 120) && (((year - 2016) % 4) == 0)) ||  ((day > 121) && (((year - 2016) % 4) !== 0)) ){
-      //   month = 5;
-      //   tempday -= 120;
-      // }else if( ((day > 90) && (((year - 2016) % 4) == 0)) ||  ((day > 91) && (((year - 2016) % 4) !== 0)) ){
-      //   month = 4;
-      //   tempday -=90;
-      // }else if( ((day > 59) && (((year - 2016) % 4) == 0)) ||  ((day > 60) && (((year - 2016) % 4) !== 0)) ){
-      //   month = 3;
-      //   tempday -= 59;
-      // }else if(day > 31){
-      //   month = 2
-      //   tempday -=31;
-      // }
-      // day = tempday;
-      //
-      // hour = ((epoch % 86400L)/3600) + 2;
-      // if( hour > 23) hour - 24;
-      // minute = (epoch % 3600)/60;
-      // second = (epoch % 60) + 1;
-      // if(seconds > 59){
-      //   second = 0
-      //   minute += 1;
-      //   if(minute > 59){
-      //     minute = 0;
-      //     hour + =1
-      //     if(hour > 23) hour = 0;
-      //   }
-      // }
-      mySerial.print("year: ");
-      mySerial.println(year);
-      mySerial.print("day: ");
-      mySerial.println(day);
-      mySerial.print("hour: ");
-      mySerial.println(hour);
-      mySerial.print("minute: ");
-      mySerial.println(minute);
-      mySerial.print("second: ");
-      mySerial.println(second);
+      if(RTCUpdate(year,month,day,hour,minute,second)) NTPUpate = 0;
+      else{
+        stamp2 = millis();
+        NTPUpate = 3;
+      }
       break;
-    // case 1:
-    //   Serial.println("AT+CIPSTART=\"UDP\",\"ntp2.is.co.za\",123");  //send command to device
-    //   NTPUpate++;
-    //   stamp2 = millis();
-    //   break;
-    // case 2:
-    //
-    //   while (Serial.available()) {
-    //     byte temp2 = Serial.read() ;
-    //     for (int i = 5 ; i > 0 ; i --) {
-    //       temp[i] = temp[i - 1];
-    //     }
-    //     temp[0] = temp2;
-    //     if (temp[0] == 75 && temp[1] == 79) { //search for Linked
-    //       NTPUpate++;
-    //       mySerial.println("OK");
-    //       break;
-    //     } else if (temp[0] == 107 && temp[1] == 110 && temp[2] == 105 && temp[3] == 108 && temp[4] == 110 && temp[5] == 85) { //search for Unlink
-    //       NTPUpate = 0;
-    //       stamp2 = millis();
-    //       mySerial.println("not linked");
-    //       break;
-    //     }
-    //     delay(5);
-    //   }
-    //   if((millis() - stamp2) >= 5000){
-    //     mySerial.println("improper response found");
-    //     NTPUpate = 5;
-    //   }
-    //   break;
-    // case 3:
-    //   mySerial.println("sending packet");
-    //
-    //   Serial.println("AT+CIPSEND=48");
-    //   Serial.flush();
-    //   delay(2000);
-    //   for (int i = 0; i < 48; i++) {
-    //     Serial.write((byte)cmd[i]);                                    //sending CONNEC message
-    //     Serial.flush();
-    //   }
-    //   stamp2 = millis();
-    //   NTPUpate++;
-    //   break;
-    // case 4:
-    // #ifdef _DEBUG_
-    //   if((millis() - stamp2) <=3000){
-    //     if(Serial.available()){
-    //       mySerial.print(Serial.read());
-    //     }
-    //   }else{
-    //     NTPUpate++;
-    //     mySerial.println();
-    //   }
-    // #else
-    // #endif
-    //   break;
-    // case 5:
-    //   Serial.println("AT+CIPCLOSE");
-    //   NTPUpate = 0;
-    //   stamp2 = millis();
-    //   #ifdef _DEBUG_
-    //     mySerial.println("done with time");
-    //   #endif
     default:
       break;
   }
