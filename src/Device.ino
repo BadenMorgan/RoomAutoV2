@@ -232,7 +232,7 @@ void loop() {
   HeatControl();
   WWDMWSwitchCheck();
 #ifdef WIFIPRESENT
-  esp8266.MQTTProcess(SubhQue, SubExec, PublishQue);
+  if(!esp8266.NTPUpate) esp8266.MQTTProcess(SubhQue, SubExec, PublishQue);
 #endif
   if (WakeMode) {
     RelayCounter();
@@ -386,8 +386,11 @@ void DisplayInfoUpdate() {
   } else {
 #ifdef _DISPLAY_
     if (RTC.chipPresent()) {
-
-      lcd.print(F("run SetTime example"));
+      lcd.clear();
+      lcd.print(F("Attempting to "));
+      lcd.print(F("reset the Time"));
+      if(!esp8266.NTPUpate) esp8266.NTPUpate = 1;
+      esp8266.NTPProcess(UpdateRTC);
     } else {
       lcd.print(F("RTC read error"));
     }
@@ -1068,4 +1071,16 @@ void SubExec() {
     }
     esp8266.Sub1->len = 0;
   }
+}
+
+uint8_t UpdateRTC(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint8_t second){
+  tmElements_t tm;
+  tm.Year = CalendarYrToTm(year);
+  tm.Month = month;
+  tm.Day = day;
+  tm.Hour = hour;
+  tm.Minute = minute;
+  tm.Second = second;
+  if(RTC.write(tm)) return 1;
+  else return 0;
 }
