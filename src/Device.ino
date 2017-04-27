@@ -349,6 +349,11 @@ void DisplayInfoUpdate() {
   byte tempseconds = seconds;
 
   if (RTC.read(tm)) {
+    if(esp8266.NTPUpate){
+       esp8266.NTPUpate = 0;
+       esp8266.connectd |= 2;                                                    //set status to disconnected
+       esp8266.connectd ^= 2;
+     }
     seconds = tm.Second;
     if ((seconds != tempseconds)) {
       hours = tm.Hour;
