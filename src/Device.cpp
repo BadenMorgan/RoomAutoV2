@@ -127,7 +127,8 @@ byte receivedflag = 0;
 uint16_t LDRVal = 0;
 
 //temperature to moderate the room at default is 23
-float setTemp = 23;
+float setTemp = 23.5;
+uint8_t turboTemp = 2;
 
 ////////////////////////////////////////////////////
 //__________________________________________________
@@ -664,24 +665,28 @@ void TimedOutput() {
 //heater relay control code
 void HeatControl() {
   if (heatersON) {
-    if (temperature < setTemp - 1) {
+    float TempSetTemp = setTemp;
+    if(hours > 2 && hours < 9){
+      TempSetTemp += turboTemp;
+    }
+    if (temperature < TempSetTemp - 1) {
       expander1data |= 0b10;
     }
-    if (temperature < setTemp - 1.5) {
+    if (temperature < TempSetTemp - 1.5) {
       expander1data |= 0b100;
     }
-    if (temperature < setTemp - 2) {
+    if (temperature < TempSetTemp - 2) {
       expander1data |= 0b1000;
     }
-    if (temperature > setTemp + 0.5) {
+    if (temperature > TempSetTemp + 0.5) {
       expander1data |= 0b10;
       expander1data ^= 0b10;
     }
-    if (temperature > setTemp  + 1) {
+    if (temperature > TempSetTemp  + 1) {
       expander1data |= 0b100;
       expander1data ^= 0b100;
     }
-    if (temperature > setTemp + 1.5) {
+    if (temperature > TempSetTemp + 1.5) {
       expander1data |= 0b1000;
       expander1data ^= 0b1000;
     }
@@ -873,6 +878,7 @@ void LoadEEPROMDefaults() {
   uint8_t temp2 = (setTemp * 100) - (temp1 * 100);
   EEPROM.write(36, temp1);
   EEPROM.write(38, temp2);
+  EEPROM.write(40, turboTemp);
 }
 
 //load varaible from eeprom
@@ -896,7 +902,10 @@ void EEPROM2variables() {
   expander1data = EEPROM.read(34);
   uint8_t temp1 = EEPROM.read(36);
   uint8_t temp2 = EEPROM.read(38);
-  setTemp = temp1 + (temp2/100);
+  setTemp = temp2;
+  setTemp = setTemp/100;
+  setTemp = temp1 + setTemp;
+  turboTemp = EEPROM.read(40);
 }
 
 //initialize variables
@@ -957,10 +966,11 @@ void PublishQue() {
     receivedflag = 0;
   } else {
     uint8_t temp1 = setTemp;
-    uint8_t temp2 = (setTemp * 100) - (temp1 * 100);
-    byte msg[13] = {0x02, counttemplate, tempmax, tempmin, tripval, THourON, TMinuteON, THourOFF, TMinuteOFF, Whour, Wminutes, temp1, temp2};                                //message payload of MQTT package, put your payload here
+    float tempHold = (setTemp * 100);
+    uint8_t temp2 = tempHold  - (temp1 * 100);
+    byte msg[14] = {0x02, counttemplate, tempmax, tempmin, tripval, THourON, TMinuteON, THourOFF, TMinuteOFF, Whour, Wminutes, temp1, temp2, turboTemp};                                //message payload of MQTT package, put your payload here
     String topic = "d/0";                                  //topic of MQTT package, put your topic here
-    esp8266.MQTTPublish(topic, &msg[0], 12 );
+    esp8266.MQTTPublish(topic, &msg[0], 14 );
     receivedflag = 0;
   }
 }
@@ -1107,12 +1117,18 @@ void SubExec() {
           }
         case 8:
           {
-            if(esp8266.Sub1->payloadlen == 3){
+            if(esp8266.Sub1->payloadlen == 4){
               uint8_t temp1 = esp8266.Sub1->payload[1];
               uint8_t temp2 = esp8266.Sub1->payload[2];
               EEPROM.write(36, temp1 );
               EEPROM.write(38, temp2 );
-              setTemp = temp1 + (temp2/100);
+              setTemp = temp2;
+              setTemp = setTemp/100;
+              setTemp = temp1 + setTemp;
+              turboTemp = esp8266.Sub1->payload[3];
+              EEPROM.write(40, turboTemp);
+              receivedflag = 3;
+              break;
             }
           }
         default:
