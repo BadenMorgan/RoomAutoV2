@@ -126,6 +126,9 @@ byte receivedflag = 0;
 //saves value on ldr
 uint16_t LDRVal = 0;
 
+//temperature to moderate the room at default is 23
+float setTemp = 23;
+
 ////////////////////////////////////////////////////
 //__________________________________________________
 
@@ -161,6 +164,32 @@ decode_results results;
 //esp module decleration
 ESP8266 esp8266(1000);
 
+/////////////////////////////////////////////////////
+//function declerations
+void UpdateExpander(uint8_t expand);
+void InitPins(void);
+void InitDisplay(void);
+void InitVaraibles(void);
+void TempRequest(void);
+void DisplayInfoUpdate(void);
+void DisplaySettings(void);
+void IRreceive(void);
+void CapCheck(void);
+void TimedWake(void);
+void TimedOutput(void);
+void HeatControl(void);
+void WWDMWSwitchCheck(void);
+void RelayCounter(void);
+void TouchButton(void);
+void MotionCheck(void);
+void BuzzerAlert(void);
+void SubhQue(void);
+void SubExec(void);
+void PublishQue(void);
+void print2digits(int number);
+void WakeToSleep(void);
+uint8_t readCapacitivePin(int pinToMeasure);
+uint8_t UpdateRTC(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint8_t second);
 
 ////////////////////////////////////////////////////
 //__________________________________________________
@@ -635,24 +664,24 @@ void TimedOutput() {
 //heater relay control code
 void HeatControl() {
   if (heatersON) {
-    if (temperature < 24) {
+    if (temperature < setTemp - 1) {
       expander1data |= 0b10;
     }
-    if (temperature < 23.5) {
+    if (temperature < setTemp - 1.5) {
       expander1data |= 0b100;
     }
-    if (temperature < 23) {
+    if (temperature < setTemp - 2) {
       expander1data |= 0b1000;
     }
-    if (temperature > 25.5) {
+    if (temperature > setTemp + 0.5) {
       expander1data |= 0b10;
       expander1data ^= 0b10;
     }
-    if (temperature > 26) {
+    if (temperature > setTemp  + 1) {
       expander1data |= 0b100;
       expander1data ^= 0b100;
     }
-    if (temperature > 26.5) {
+    if (temperature > setTemp + 1.5) {
       expander1data |= 0b1000;
       expander1data ^= 0b1000;
     }
@@ -840,6 +869,10 @@ void LoadEEPROMDefaults() {
   EEPROM.write(30, Wminutes );
   EEPROM.write(32, timer );
   EEPROM.write(34, expander1data);
+  uint8_t temp1 = setTemp;
+  uint8_t temp2 = (setTemp * 100) - (temp1 * 100);
+  EEPROM.write(36, temp1);
+  EEPROM.write(38, temp2);
 }
 
 //load varaible from eeprom
@@ -861,6 +894,9 @@ void EEPROM2variables() {
   Wminutes = EEPROM.read(30);
   timer = EEPROM.read(32);
   expander1data = EEPROM.read(34);
+  uint8_t temp1 = EEPROM.read(36);
+  uint8_t temp2 = EEPROM.read(38);
+  setTemp = temp1 + (temp2/100);
 }
 
 //initialize variables
@@ -920,10 +956,11 @@ void PublishQue() {
     esp8266.MQTTPublish(topic, &msg[0], 21 );
     receivedflag = 0;
   } else {
-
-    byte msg[11] = {0x02, counttemplate, tempmax, tempmin, tripval, THourON, TMinuteON, THourOFF, TMinuteOFF, Whour, Wminutes};                                //message payload of MQTT package, put your payload here
+    uint8_t temp1 = setTemp;
+    uint8_t temp2 = (setTemp * 100) - (temp1 * 100);
+    byte msg[13] = {0x02, counttemplate, tempmax, tempmin, tripval, THourON, TMinuteON, THourOFF, TMinuteOFF, Whour, Wminutes, temp1, temp2};                                //message payload of MQTT package, put your payload here
     String topic = "d/0";                                  //topic of MQTT package, put your topic here
-    esp8266.MQTTPublish(topic, &msg[0], 11 );
+    esp8266.MQTTPublish(topic, &msg[0], 12 );
     receivedflag = 0;
   }
 }
@@ -1066,6 +1103,16 @@ void SubExec() {
               EEPROM.write(30, Wminutes );
               receivedflag = 3;
               break;
+            }
+          }
+        case 8:
+          {
+            if(esp8266.Sub1->payloadlen == 3){
+              uint8_t temp1 = esp8266.Sub1->payload[1];
+              uint8_t temp2 = esp8266.Sub1->payload[2];
+              EEPROM.write(36, temp1 );
+              EEPROM.write(38, temp2 );
+              setTemp = temp1 + (temp2/100);
             }
           }
         default:
