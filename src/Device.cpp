@@ -450,33 +450,67 @@ void print2digits(int number) {
 void IRreceive() {
   if (irrecv.decode(&results)) {
     //set 1st relay
+    // Serial.print("IR:");
+    // Serial.println(results.value, HEX);
     if (WakeMode) {
-      if (results.value == 0x41BEE01F) {
+      //cheapie
+      if (results.value == 0x41BEE01F) {//PLAY
         expander1data ^= 0b100000;
         Stamp = millis();
       }
       //set 2nd relay
-      if (results.value == 0x41BED02F) {
+      if (results.value == 0x41BED02F) {//UP
         expander1data ^= 0b10000;
         Stamp = millis();
       }
       //set 3rd relay
-      if (results.value == 0x41BE708F) {
+      if (results.value == 0x41BE708F) {//MINUS
         expander1data ^= 0b1000;
         heatersON = 0;
       }
       //set 4th relay
-      if (results.value == 0x41BE40BF) {
+      if (results.value == 0x41BE40BF) {//LEFT
         expander1data ^= 0b100;
         heatersON = 0;
       }
       //set 5th relay
-      if (results.value == 0x41BEC03F) {
+      if (results.value == 0x41BEC03F) {//ENTER
         expander1data ^= 0b10;
         heatersON = 0;
       }
       //set 6th relay
-      if (results.value == 0x41BEB04F) {
+      if (results.value == 0x41BEB04F) {//RIGHT
+        expander1data ^= 0b1;
+        timer = 0;
+      }
+
+      //nicie
+      if (results.value == 0X97E03D8D) {//PREV
+        expander1data ^= 0b100000;
+        Stamp = millis();
+      }
+      //set 2nd relay
+      if (results.value == 0xF059B22B) {//PP
+        expander1data ^= 0b10000;
+        Stamp = millis();
+      }
+      //set 3rd relay
+      if (results.value == 0x569D0D0B) {//NEXT
+        expander1data ^= 0b1000;
+        heatersON = 0;
+      }
+      //set 4th relay
+      if (results.value == 0x6B902869) {//DRC
+        expander1data ^= 0b100;
+        heatersON = 0;
+      }
+      //set 5th relay
+      if (results.value == 0x3BDEF1AD) {//REPEAT
+        expander1data ^= 0b10;
+        heatersON = 0;
+      }
+      //set 6th relay
+      if (results.value == 0x3F035189) {//AUTO VOL
         expander1data ^= 0b1;
         timer = 0;
       }
@@ -484,14 +518,23 @@ void IRreceive() {
       UpdateExpander(1);
     }
     //set daytime booleand
-    if (results.value == 0x41BE609F) {
+    //cheapie
+    if (results.value == 0x41BE609F) {//DOWN
       WakeMode ^= 1;
       WakeToSleep();
     }
-    if (results.value == 0x41BEA05F) {
+    if (results.value == 0x41BEA05F) {//STOP
       heatersON ^= 1;
     }
 
+    //nicie
+    if (results.value == 0xDED0E5CE) {//SLEEP
+      WakeMode ^= 1;
+      WakeToSleep();
+    }
+    if (results.value == 0x8386D2C6) {//AV SYNC
+      heatersON ^= 1;
+    }
     irrecv.resume(); // Receive the next value
   }
 }
