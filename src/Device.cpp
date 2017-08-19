@@ -200,6 +200,8 @@ uint8_t UpdateRTC(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8
 ////////////////////////////////////////////////////
 
 void setup() {
+  // Serial.begin(9600);
+  // Serial.print("hello");
 #ifdef MAINDEBUG
   Serial.begin(9600);
   Serial.print("hello");
@@ -515,6 +517,37 @@ void IRreceive() {
         timer = 0;
       }
       //update values
+
+      //OTHER
+      if (results.value == 0xDB2CD85E) {//1
+        expander1data ^= 0b100000;
+        Stamp = millis();
+      }
+      //set 2nd relay
+      if (results.value == 0x72C8CD04) {//2
+        expander1data ^= 0b10000;
+        Stamp = millis();
+      }
+      //set 3rd relay
+      if (results.value == 0xBFA12A36) {//3
+        expander1data ^= 0b1000;
+        heatersON = 0;
+      }
+      //set 4th relay
+      if (results.value == 0xB8BAFCA0) {//4
+        expander1data ^= 0b100;
+        heatersON = 0;
+      }
+      //set 5th relay
+      if (results.value == 0x7ABBFE1A) {//5
+        expander1data ^= 0b10;
+        heatersON = 0;
+      }
+      //set 6th relay
+      if (results.value == 0xF1D5E280) {//6
+        expander1data ^= 0b1;
+        timer = 0;
+      }
       UpdateExpander(1);
     }
     //set daytime booleand
@@ -533,6 +566,15 @@ void IRreceive() {
       WakeToSleep();
     }
     if (results.value == 0x8386D2C6) {//AV SYNC
+      heatersON ^= 1;
+    }
+
+    //other
+    if (results.value == 0xB595064) {//power
+      WakeMode ^= 1;
+      WakeToSleep();
+    }
+    if (results.value == 0xC2E92AD6) {//AV SYNC
       heatersON ^= 1;
     }
     irrecv.resume(); // Receive the next value
